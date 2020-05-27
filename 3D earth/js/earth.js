@@ -1,5 +1,5 @@
-var earthImg = '../earth.jpg'; // 
-var cloudsImg = '../clouds.jpg';
+var earthImg = './earth.jpg'; // 
+var cloudsImg = './clouds.jpg';
 
 var container, stats, orbitControl;
 var camera, scene, renderer;
