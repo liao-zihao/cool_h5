@@ -1,5 +1,5 @@
-var earthImg = 'earth.jpg'; // 
-var cloudsImg = 'clouds.jpg';
+var earthImg = 'https://liao-zihao.github.io/cool_h5/3D%20earth/earth.jpg'; // 
+var cloudsImg = 'https://liao-zihao.github.io/cool_h5/3D%20earth/clouds.jpg';
 
 var container, stats, orbitControl;
 var camera, scene, renderer;
