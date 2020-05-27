@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html >
+<head>
+  <meta charset="UTF-8">
+  <title>Vue.js标准型+科学型计算器插件</title>
+  
+  <link rel="stylesheet" href="css/normalize.min.css">
+<link rel="stylesheet" href="css/style.css">
+
+</head>
+
+<body>
+  <div id="app">
+  <div class="calculator">
+    <button @click="changeModeEvent" class="toggle-button">
+      <p v-if="changeMode">Show Advanced Mode &nbsp; &nbsp; &#9864;</p>
+      <p v-else>Show Basic Mode &nbsp; &nbsp; &#9862;</p>
+    </button>
+    <div class="results">
+      <input class="input" v-model="current" />
+    </div>
+    <div class="mode" v-if="changeMode">
+      <button class="button" @click="press">7</button>
+      <button class="button" @click="press">8</button>
+      <button class="button" @click="press">9</button>
+      <button class="button" @click="press">*</button>
+      <button class="button" @click="press">&#60;=</button>
+      <button class="button" @click="press">C</button>
+      <button class="button" @click="press">4</button>
+      <button class="button" @click="press($event)">5</button>
+      <button class="button" @click="press">6</button>
+      <button class="button" @click="press">/</button>
+      <button class="button" @click="press">(</button>
+      <button class="button" @click="press">)</button>
+      <button class="button" @click="press">1</button>
+      <button class="button" @click="press">2</button>
+      <button class="button" @click="press">3</button>
+      <button class="button" @click="press">-</button>
+      <button class="button" @click="press">x ²</button>
+      <button class="button" @click="press">±</button>
+      <button class="button" @click="press">0</button>
+      <button class="button" @click="press">.</button>
+      <button class="button" @click="press">%</button>
+      <button class="button" @click="press">+</button>
+      <button class="button equal-sign" @click="press">=</button>  
+    </div>
+    <div class="mode" v-else>
+      <button class="button" @click="press">sin</button>
+      <button class="button" @click="press">cos</button>
+      <button class="button" @click="press">tan</button>
+      <button class="button" @click="press">x^</button>
+      <button class="button" @click="press">&#60;=</button>
+      <button class="button" @click="press">C</button>
+      <button class="button" @click="press">log</button>
+      <button class="button" @click="press">ln</button>
+      <button class="button" @click="press">e</button>
+      <button class="button" @click="press">∘</button>
+      <button class="button" @click="press">rad</button>
+      <button class="button" @click="press">√</button>
+      <button class="button" @click="press">7</button>
+      <button class="button" @click="press">8   </button>
+      <button class="button" @click="press">9</button>
+      <button class="button" @click="press">/</button>
+      <button class="button" @click="press">x ²</button>
+      <button class="button" @click="press">x !</button>
+      <button class="button" @click="press">4</button>
+      <button class="button" @click="press">5</button>
+      <button class="button" @click="press">6</button>
+      <button class="button" @click="press">*</button>
+      <button class="button" @click="press">(</button>
+      <button class="button" @click="press">)</button>
+      <button class="button" @click="press">1</button>
+      <button class="button" @click="press">2</button>
+      <button class="button" @click="press">3</button>
+      <button class="button" @click="press">-</button>
+      <button class="button" @click="press">%</button>
+      <button class="button" @click="press">±</button>
+      <button class="button" @click="press">0</button>
+      <button class="button" @click="press">.</button>
+      <button class="button" @click="press">&#x003C0;</button>
+      <button class="button" @click="press">+</button>                    
+      <button class="button equal-sign" @click="press">=</button>
+    </div>
+  </div>
+</div>
+
+  <script src='js/vue.min.js'></script>
+
+    <script  src="js/index.js"></script>
+
+</body>
+</html>

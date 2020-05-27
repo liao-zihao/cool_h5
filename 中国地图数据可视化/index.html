@@ -1,0 +1,368 @@
+<html>
+
+<head>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            /* 隐藏body窗口区域滚动条 */
+        }
+    </style>
+</head>
+
+<body>
+    <div id='div'></div>
+    <script src="https://cdn.bootcdn.net/ajax/libs/three.js/102/three.min.js"></script>
+    <script src='./build/OrbitControls.js'></script>
+    <script src='./build/util.js'></script>
+    <script src='./build/d3-geo.v1.min.js'></script>
+    <script>
+        //初始化 场景 灯光 相机 渲染器 控制器 模型数组
+        var scene, camera, renderer, AxesHelper, directionalLight, controls, group
+        function init() {
+            scene = new THREE.Scene()
+            // scene.rotateX(Math.PI/4)
+            AxesHelper = new THREE.AxesHelper(100)
+            scene.add(AxesHelper)
+            camera = new THREE.PerspectiveCamera(10, window.innerWidth / window.innerHeight, 1, 1000);//透视相机
+            camera.up.x = 0;
+            camera.up.y = 0;
+            camera.up.z = 1;
+            camera.position.set(200, 0, 200)
+            camera.lookAt(0, 0, 0)
+
+            directionalLight = new THREE.DirectionalLight(0xffffff, 0.5);
+            scene.add(directionalLight);
+
+            renderer = new THREE.WebGLRenderer({
+                antialias: true
+            })
+            renderer.setSize(window.innerWidth, window.innerHeight)
+            document.body.appendChild(renderer.domElement)
+
+            controls = new THREE.OrbitControls(camera)
+            window.onresize = () => {
+                renderer.setSize(window.innerWidth, window.innerHeight)
+                camera.aspect = window.innerWidth / window.innerHeight
+                camera.updateProjectionMatrix()
+            }
+        }
+
+        function render() {
+            renderer.render(scene, camera);
+            requestAnimationFrame(render)
+        }
+
+        //////////////////添加地图模型
+        function drawModel(mapData) {
+            function drawModelByPoints(points) {
+                const shape = new THREE.Shape();
+                points.forEach((d, i) => {
+                    const [x, y] = d;
+                    if (i === 0) {
+                        shape.moveTo(x, y);
+                    } else if (i === points.length - 1) {
+                        shape.quadraticCurveTo(x, y, x, y);
+                    } else {
+                        shape.lineTo(x, y, x, y);
+                    }
+                });
+
+                const geometry = new THREE.ExtrudeGeometry(shape, {
+                    depth: -2,
+                    bevelEnabled: false
+                });
+                const material = new THREE.MeshBasicMaterial({
+                    color: '#006de0',
+                    transparent: true,
+                    opacity: 0.6,
+                    side: THREE.DoubleSide
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                return mesh;
+            }
+            function drawLineByPoints(points) {
+                const material = new THREE.LineBasicMaterial({
+                    color: '#ccc',
+                    transparent: true,
+                    opacity: 1
+                });
+                const geometry = new THREE.Geometry();
+                points.forEach(d => {
+                    const [x, y, z] = d;
+                    geometry.vertices.push(new THREE.Vector3(x, y, z + 0.1));
+                });
+                const line = new THREE.Line(geometry, material);
+                return line;
+            }
+            group = new THREE.Group()
+            let lineGroup = new THREE.Group()
+            let lineBottomGroup = new THREE.Group()
+            //每个省有附带的小地方，用组包括
+            mapData.features.forEach(d => {
+                const g = new THREE.Group(); // 用于存放每个地图模块。||省份
+                g.data = d;
+                d.vector3.forEach(points => {
+                    // 多个面
+                    if (points[0][0] instanceof Array) {
+                        points.forEach(p => {
+                            const mesh = drawModelByPoints(p);
+                            const lineMesh = drawLineByPoints(p);
+                            const lineMesh2 = drawLineByPoints(p);
+                            lineGroup.add(lineMesh);
+                            lineBottomGroup.add(lineMesh2);
+                            g.add(mesh);
+                        });
+                    } else {
+                        // 单个面
+                        const mesh = drawModelByPoints(points);
+                        const lineMesh = drawLineByPoints(points);
+                        const lineMesh2 = drawLineByPoints(points);
+                        lineGroup.add(lineMesh);
+                        lineBottomGroup.add(lineMesh2);
+                        g.add(mesh);
+                    }
+                });
+                group.add(g);
+            });
+            //clone有bug
+            lineBottomGroup.position.z = -2
+            scene.add(group)
+            scene.add(lineBottomGroup)
+            scene.add(lineGroup)
+        }
+
+        /////////////////添加光柱
+        let dataKeys = {}
+        var sixgroup=null
+        function drawLigthBar(mapData) {
+            function drawSixMesh(x, y, z, i, size = 6) {
+                const geometry = new THREE.CircleGeometry(0.5, size);
+                const material = new THREE.MeshBasicMaterial({ color: ['#fff', '#ff0'][i % 2] });
+                const mesh = new THREE.Mesh(geometry, material);
+                mesh.position.set(x, y, z + 0.1);
+                return mesh;
+            }
+
+            function drawSixLineLoop(x, y, z, i) {
+                // 绘制六边型
+                const geometry = new THREE.CircleGeometry(0.7, 6);
+                const material = new THREE.MeshBasicMaterial({ color: [i % 2], transparent: true });
+                geometry.vertices.shift();['#fff', '#ff0']
+                const line = new THREE.LineLoop(geometry, material);
+                line.position.set(x, y, z + 0.1);
+                return line;
+            }
+            const textures = [new THREE.TextureLoader().load('./assets/images/lightray.jpg'), new THREE.TextureLoader().load('./assets/images/lightray_yellow.jpg')];
+            function drawPlane(x, y, z, value, i) {
+                const hei = value / 10;
+                const geometry = new THREE.PlaneGeometry(1, hei);
+                const material = new THREE.MeshBasicMaterial({
+                    map: textures[i % 2],
+                    depthTest: false,
+                    transparent: true,
+                    color: ['#fff', '#ff0'][i % 2],
+                    side: THREE.DoubleSide,
+                    blending: THREE.AdditiveBlending
+                });
+                const plane = new THREE.Mesh(geometry, material);
+                plane.position.set(x, y, z + hei / 2);
+                plane.rotation.x = Math.PI / 2;
+                plane.rotation.z = Math.PI;
+                const plane2 = plane.clone();
+                plane2.rotation.y = Math.PI / 2;
+                return [plane, plane2];
+            }
+
+            const datas = [
+                { name: '海南省', value: 60 },
+                { name: '北京市', value: 100 },
+                { name: '山东省', value: 80 },
+                { name: '海南省', value: 100 },
+                { name: '四川省', value: 100 },
+                { name: '台湾', value: 70 },
+                { name: '黑龙江省', value: 80 },
+                { name: '湖北省', value: 70 },
+                { name: '内蒙古自治区', value: 50 },
+                { name: '西藏自治区', value: 50 },
+                { name: '新疆维吾尔自治区', value: 63 },
+                { name: '甘肃省', value: 63 },
+                { name: '山西省', value: 83 },
+                { name: '上海市', value: 73 },
+                { name: '福建省', value: 63 },
+                { name: '广东省', value: 53 },
+                { name: '云南省', value: 43 },
+                { name: '辽宁省', value: 63 },
+                { name: '青海省', value: 90 }
+            ];
+            mapData.features.forEach(d => {
+                const { name, cp } = d.properties;
+                dataKeys[name] = [...cp];
+            });
+            let group = new THREE.Group();
+            let sixLineGroup = new THREE.Group();
+            datas.forEach((d, i) => {
+                const lnglat = dataKeys[d.name];
+                const [x, y, z] = lnglatToMector(lnglat);
+
+                // 绘制六边体
+                group.add(drawSixMesh(x, y, z, i));
+                // 绘制6边线
+                sixLineGroup.add(drawSixLineLoop(x, y, z, i));
+
+                // 绘制柱子
+                const [plane1, plane2] = drawPlane(x, y, z, d.value, i);
+                group.add(plane2);
+                group.add(plane1);
+            });
+
+            scene.add(group)
+            sixgroup = sixLineGroup
+            // console.log(sixgroup)
+            scene.add(sixLineGroup)
+        }
+
+        /////////////////添加线条
+        var flyGroup=null
+        function drawLines() {
+            const flyDatas = [
+                { source: { name: '海南省' }, target: { name: '四川省' } },
+                { source: { name: '北京市' }, target: { name: '四川省' } },
+                { source: { name: '山东省' }, target: { name: '四川省' } },
+                { source: { name: '台湾' }, target: { name: '四川省' } },
+                { source: { name: '黑龙江省' }, target: { name: '四川省' } },
+                { source: { name: '湖北省' }, target: { name: '四川省' } },
+                { source: { name: '内蒙古自治区' }, target: { name: '四川省' } },
+                { source: { name: '西藏自治区' }, target: { name: '四川省' } },
+                { source: { name: '新疆维吾尔自治区' }, target: { name: '四川省' } },
+                { source: { name: '青海省' }, target: { name: '四川省' } }
+            ];
+
+            const group = new THREE.Group();
+            flyDatas.forEach(d => {
+                const slnglat = dataKeys[d.source.name];
+                const tlnglat = dataKeys[d.target.name];
+                const z = 10;
+                const [x1, y1, z1] = lnglatToMector(slnglat);
+                const [x2, y2, z2] = lnglatToMector(tlnglat);
+                const curve = new THREE.QuadraticBezierCurve3(
+                    new THREE.Vector3(x1, y1, z1),
+                    new THREE.Vector3((x1 + x2) / 2, (y1 + y2) / 2, z),
+                    new THREE.Vector3(x2, y2, z2)
+                );
+                const points = curve.getPoints(20);
+                const geometry = new THREE.Geometry();
+                geometry.vertices = points;
+                geometry.colors = new Array(points.length).fill(new THREE.Color('#ff0'));
+                const material = new THREE.LineBasicMaterial({
+                    vertexColors: THREE.VertexColors,
+                    transparent: true,
+                    side: THREE.DoubleSide,
+                    opacity: 0.7
+                });
+                const mesh = new THREE.Line(geometry, material);
+                group.add(mesh);
+            });
+            flyGroup = group;
+            scene.add(group);
+        }
+
+        /////////////////加载json开始绘制
+        function draw() {
+            fetch('./assets/map/china.json').then(json => json.json()).then(json => {
+                let mapData = decode(json)
+                mapData.features.forEach(d => {
+                    d.vector3 = [];
+                    d.geometry.coordinates.forEach((coordinates, i) => {
+                        d.vector3[i] = [];
+                        coordinates.forEach((c, j) => {
+                            if (c[0] instanceof Array) {
+                                d.vector3[i][j] = [];
+                                c.forEach(cinner => {
+                                    let cp = lnglatToMector(cinner);
+                                    d.vector3[i][j].push(cp);
+                                });
+                            } else {
+                                let cp = lnglatToMector(c);
+                                d.vector3[i].push(cp);
+                            }
+                        });
+                    });
+                });
+                // console.log(mapData)
+                //经纬度转坐标完毕，开始绘制
+                drawModel(mapData)
+                drawLigthBar(mapData)
+                drawLines()
+                render()
+                //动画
+                let colorIndex = 0
+                let pointsLength = 20
+                setInterval(() => {
+                    let ratio = colorIndex / pointsLength;
+
+                    flyGroup &&
+                        flyGroup.children.forEach(d => {
+                            d.geometry.colors = new Array(pointsLength).fill(1).map((d, i) => {
+                                if (i !== colorIndex) {
+                                    return new THREE.Color('#005fc4');
+                                } else {
+                                    return new THREE.Color('#00f3ff');
+                                }
+                            });
+                            d.geometry.colorsNeedUpdate = true;
+                        });
+
+                    sixgroup &&
+                    sixgroup.children.forEach(d => {
+                            d.scale.set(1 + ratio, 1 + ratio, d.scale.z);
+                            d.material.opacity = 1 - ratio;
+                        });
+
+                    colorIndex++;
+                    if (colorIndex > pointsLength - 1) {
+                        colorIndex = 0;
+                    }
+                }, 30)
+            })
+        }
+        init()
+        draw()
+
+        //点击监听
+        var meshes = []//mesh数组
+        window.addEventListener('click', event => {
+            var raycaster = new THREE.Raycaster();
+            var mouse = new THREE.Vector2();
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = - (event.clientY / window.innerHeight) * 2 + 1;
+            raycaster.setFromCamera(mouse, camera);
+            if (meshes.length == 0) {
+                group.children.forEach(g => {
+                    g.children.forEach(mesh => {
+                        // console.log(mesh)
+                        meshes.push(mesh);
+                    });
+                });
+            }
+            var intersects = raycaster.intersectObjects(meshes, false);
+            if (intersects.length > 0) {
+                let g = intersects[0].object.parent
+                g.parent.children.forEach(gs => {
+                    gs.children.forEach(mesh => {
+                        mesh.material.color.set('#006de0');
+                    });
+                });
+
+                // 设置颜色
+                g.children.forEach(mesh => {
+                    mesh.material.color.set('#ff0');
+                });
+
+
+            }
+        })
+    </script>
+</body>
+
+</html>
